@@ -31,14 +31,15 @@ struct TalkFace: View {
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
+        let gold = Color(red: 1.00, green: 0.761, blue: 0.290)
         switch family {
         case .accessoryInline:
-            Label("Lumen", systemImage: "mic.fill")
+            Label("Lumen", systemImage: "mic.fill").foregroundStyle(gold)
         case .accessoryCircular, .accessoryCorner:
-            Image(systemName: "mic.fill")
+            Image(systemName: "mic.fill").foregroundStyle(gold)
         default:
             VStack(alignment: .leading, spacing: 2) {
-                Label("Lumen", systemImage: "mic.fill").font(.headline)
+                Label("Lumen", systemImage: "mic.fill").font(.headline).foregroundStyle(gold)
                 Text("Tap to talk").font(.caption2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

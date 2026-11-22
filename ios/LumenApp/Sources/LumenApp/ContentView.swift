@@ -48,11 +48,16 @@ struct ContentView: View {
             openSetupIfNeeded()
         }
         .onOpenURL { url in
-            if url.host == "listen" { model.beginTalking() }
+            if Self.isListenURL(url) { model.beginTalking() }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // Re-check both connections whenever the app comes to the front.
-            if phase == .active { model.startMonitoring() } else { model.stopMonitoring() }
+            if phase == .active {
+                model.startMonitoring()
+                consumeListen()
+            } else {
+                model.stopMonitoring()
+            }
         }
     }
 
@@ -246,6 +251,13 @@ struct ContentView: View {
             UserDefaults.standard.set(false, forKey: "lumen.listenOnOpen")
             model.beginTalking()
         }
+    }
+
+    static func isListenURL(_ url: URL) -> Bool {
+        let host = url.host?.lowercased() ?? ""
+        let path = url.path.lowercased()
+        let raw = url.absoluteString.lowercased()
+        return host == "listen" || path.contains("listen") || raw.contains("://listen")
     }
 
     private func sendDraft() {

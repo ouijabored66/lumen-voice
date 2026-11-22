@@ -3,4 +3,5 @@
 LUMEN_PHONE_BUNDLE_ID=com.ouijabored66.lumenvoice
 LUMEN_WATCH_BUNDLE_ID=com.ouijabored66.lumenvoice.watchkitapp
 LUMEN_CONTROLS_BUNDLE_ID=com.ouijabored66.lumenvoice.controls
+LUMEN_WIDGET_BUNDLE_ID=com.ouijabored66.lumenvoice.widgets
 LUMEN_TALKFACE_BUNDLE_ID=com.ouijabored66.lumenvoice.watchkitapp.talkface

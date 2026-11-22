@@ -18,6 +18,7 @@ BUNDLES = [
   ["com.ouijabored66.lumenvoice", "Lumen Voice", "IOS"],
   ["com.ouijabored66.lumenvoice.watchkitapp", "Lumen Voice Watch", "WATCH_OS"],
   ["com.ouijabored66.lumenvoice.controls", "Lumen Voice Controls", "IOS"],
+  ["com.ouijabored66.lumenvoice.widgets", "Lumen Voice Widgets", "IOS"],
   ["com.ouijabored66.lumenvoice.watchkitapp.talkface", "Lumen Voice Watch Face", "WATCH_OS"],
 ].freeze
 

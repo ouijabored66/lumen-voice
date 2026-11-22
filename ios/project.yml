@@ -15,7 +15,7 @@ options:
 settings:
   base:
     MARKETING_VERSION: "1.6.2"
-    CURRENT_PROJECT_VERSION: "6"
+    CURRENT_PROJECT_VERSION: "7"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
     # Sideload builds keep these IDs. The App Store workflow overrides them
@@ -23,6 +23,7 @@ settings:
     LUMEN_PHONE_BUNDLE_ID: ouijabored66.lumenvoice
     LUMEN_WATCH_BUNDLE_ID: ouijabored66.lumenvoice.watchkitapp
     LUMEN_CONTROLS_BUNDLE_ID: ouijabored66.lumenvoice.controls
+    LUMEN_WIDGET_BUNDLE_ID: ouijabored66.lumenvoice.widgets
     LUMEN_TALKFACE_BUNDLE_ID: ouijabored66.lumenvoice.watchkitapp.talkface
     # DEVELOPMENT_TEAM is passed by CI (APPLE_TEAM_ID); set it in Xcode if you build locally.
     ENABLE_USER_SCRIPT_SANDBOXING: YES
@@ -34,11 +35,14 @@ targets:
     platform: iOS
     sources:
       - path: LumenApp/Sources/LumenApp
+      - path: LumenShared/ListenIntent.swift
       - path: Relay/RelayReply.swift
       - path: Shared/Assets.xcassets
       - path: Shared/PrivacyInfo.xcprivacy
     dependencies:
       - target: LumenVoiceWatch     # embedded in LumenVoice.app/Watch/
+      - target: LumenWidgets        # Home Screen widget
+      - target: LumenControls       # Control Center control
     settings:
       base:
         PRODUCT_NAME: LumenVoice
@@ -96,6 +100,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "4"
         SKIP_INSTALL: YES             # ships inside the iPhone app, not as a separate archive product
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: LumenWatchFace      # Watch face complication
     info:
       path: Xcode/LumenVoiceWatch-Info.plist
       properties:
@@ -123,6 +129,79 @@ targets:
         WKApplication: true
         WKCompanionAppBundleIdentifier: $(LUMEN_PHONE_BUNDLE_ID)
         WKRunsIndependentlyOfCompanionApp: false
+
+  LumenWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: LumenWidgets
+      - path: LumenShared/ListenIntent.swift
+    settings:
+      base:
+        PRODUCT_NAME: LumenWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: $(LUMEN_WIDGET_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    info:
+      path: LumenWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Lumen
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  LumenControls:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: LumenControls
+      - path: LumenShared/ListenIntent.swift
+    settings:
+      base:
+        PRODUCT_NAME: LumenControls
+        PRODUCT_BUNDLE_IDENTIFIER: $(LUMEN_CONTROLS_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    info:
+      path: LumenControls/Info.plist
+      properties:
+        CFBundleDisplayName: Lumen
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  LumenWatchFace:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: LumenWatchFace
+    settings:
+      base:
+        PRODUCT_NAME: LumenWatchFace
+        PRODUCT_BUNDLE_IDENTIFIER: $(LUMEN_TALKFACE_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+    info:
+      path: LumenWatchFace/Info.plist
+      properties:
+        CFBundleDisplayName: Lumen
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        WKAppBundleIdentifier: $(LUMEN_WATCH_BUNDLE_ID)
+
 
 schemes:
   LumenVoice:
