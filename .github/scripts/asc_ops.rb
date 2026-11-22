@@ -349,9 +349,8 @@ def each_age_rating_declaration(token)
 end
 
 def summarize_age_fields(attrs)
-  parental = attrs.key?("parentalControls") ? attrs["parentalControls"].inspect : "absent"
-  assurance = attrs.key?("ageAssurance") ? attrs["ageAssurance"].inspect : "absent"
-  "parentalControls=#{parental} ageAssurance=#{assurance}"
+  keys = %w[parentalControls ageAssurance socialMedia socialMediaAgeRestricted]
+  keys.map { |k| "#{k}=#{attrs.key?(k) ? attrs[k].inspect : 'absent'}" }.join(" ")
 end
 
 def cmd_fix_age_rating(token)
@@ -365,11 +364,16 @@ def cmd_fix_age_rating(token)
     puts "appInfo id=#{info_id} state=#{state} platform=#{platform} declaration=#{decl_id} before #{summarize_age_fields(attrs)}"
     need = attrs["parentalControls"] != false || attrs["ageAssurance"] != false
     if need
+      attributes = { parentalControls: false, ageAssurance: false }
+      # ageAssurance cannot be false while socialMediaAgeRestricted is true.
+      if attrs["socialMediaAgeRestricted"]
+        attributes[:socialMediaAgeRestricted] = false
+      end
       body = {
         data: {
           type: "ageRatingDeclarations",
           id: decl_id,
-          attributes: { parentalControls: false, ageAssurance: false },
+          attributes: attributes,
         },
       }
       pcode, presult = call_api("PATCH", "/v1/ageRatingDeclarations/#{decl_id}", token, body)
