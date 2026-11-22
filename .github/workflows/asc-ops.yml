@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       command:
-        description: revoke, status, wait-build, withdraw-and-attach, or update-notes
+        description: revoke, status, wait-build, withdraw-and-attach, update-notes, list-certs, fix-age-rating, or attach
         required: true
         type: string
       cert_id:
@@ -19,7 +19,7 @@ on:
       build:
         description: Build number
         required: false
-        default: "5"
+        default: "6"
         type: string
 jobs:
   ops:
@@ -51,6 +51,15 @@ jobs:
               ;;
             update-notes)
               ruby .github/scripts/asc_ops.rb update-notes "${{ inputs.version }}"
+              ;;
+            list-certs)
+              ruby .github/scripts/asc_ops.rb list-certs
+              ;;
+            fix-age-rating)
+              ruby .github/scripts/asc_ops.rb fix-age-rating
+              ;;
+            attach)
+              ruby .github/scripts/asc_ops.rb attach "${{ inputs.version }}" "${{ inputs.build }}"
               ;;
             *)
               echo "Unknown command $cmd"

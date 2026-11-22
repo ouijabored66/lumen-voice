@@ -313,6 +313,95 @@ def cmd_update_notes(token, version_string, notes_body)
   puts "Updated App Review Information notes (#{updated.length} chars). Token not printed."
 end
 
+
+def cmd_list_certs(token)
+  code, parsed = call_api("GET", "/v1/certificates", token, nil, { "limit" => "200" })
+  die("Could not list certificates (#{code}). #{error_detail(parsed)}") unless code == 200
+  items = parsed["data"] || []
+  puts "certificates total=#{items.size}"
+  items.each do |item|
+    attrs = item["attributes"] || {}
+    kind = attrs["certificateType"].to_s
+    name = attrs["name"].to_s
+    serial = attrs["serialNumber"].to_s
+    exp = attrs["expirationDate"].to_s
+    puts "cert id=#{item['id']} type=#{kind} name=#{name} serial=#{serial} expires=#{exp}"
+  end
+end
+
+def each_age_rating_declaration(token)
+  code, parsed = call_api("GET", "/v1/apps/#{APP_ID}/appInfos", token, nil, { "limit" => "20" })
+  die("Could not list app infos (#{code}). #{error_detail(parsed)}") unless code == 200
+  infos = parsed["data"] || []
+  die("No app infos were returned.") if infos.empty?
+  infos.each do |info|
+    info_id = info["id"]
+    state = info.dig("attributes", "appStoreState").to_s
+    platform = info.dig("attributes", "platform").to_s
+    dcode, dparsed = call_api("GET", "/v1/appInfos/#{info_id}/ageRatingDeclaration", token)
+    if dcode != 200 || dparsed.dig("data", "id").nil?
+      puts "appInfo id=#{info_id} state=#{state} platform=#{platform} declaration=missing (#{dcode})"
+      next
+    end
+    decl = dparsed["data"]
+    yield info, decl
+  end
+end
+
+def summarize_age_fields(attrs)
+  parental = attrs.key?("parentalControls") ? attrs["parentalControls"].inspect : "absent"
+  assurance = attrs.key?("ageAssurance") ? attrs["ageAssurance"].inspect : "absent"
+  "parentalControls=#{parental} ageAssurance=#{assurance}"
+end
+
+def cmd_fix_age_rating(token)
+  updated = 0
+  each_age_rating_declaration(token) do |info, decl|
+    info_id = info["id"]
+    state = info.dig("attributes", "appStoreState").to_s
+    platform = info.dig("attributes", "platform").to_s
+    attrs = decl["attributes"] || {}
+    decl_id = decl["id"]
+    puts "appInfo id=#{info_id} state=#{state} platform=#{platform} declaration=#{decl_id} before #{summarize_age_fields(attrs)}"
+    need = attrs["parentalControls"] != false || attrs["ageAssurance"] != false
+    if need
+      body = {
+        data: {
+          type: "ageRatingDeclarations",
+          id: decl_id,
+          attributes: { parentalControls: false, ageAssurance: false },
+        },
+      }
+      pcode, presult = call_api("PATCH", "/v1/ageRatingDeclarations/#{decl_id}", token, body)
+      die("Could not update age rating declaration #{decl_id} (#{pcode}). #{error_detail(presult)}") unless [200, 204].include?(pcode)
+      updated += 1
+      puts "Updated age rating declaration #{decl_id}."
+    else
+      puts "Age rating declaration #{decl_id} already has parentalControls and ageAssurance set to false."
+    end
+    vcode, vparsed = call_api("GET", "/v1/appInfos/#{info_id}/ageRatingDeclaration", token)
+    die("Could not re-read age rating declaration #{decl_id} (#{vcode}). #{error_detail(vparsed)}") unless vcode == 200
+    vattrs = vparsed.dig("data", "attributes") || {}
+    puts "appInfo id=#{info_id} declaration=#{decl_id} after #{summarize_age_fields(vattrs)}"
+    unless vattrs["parentalControls"] == false && vattrs["ageAssurance"] == false
+      die("Verification failed for declaration #{decl_id}: #{summarize_age_fields(vattrs)}")
+    end
+  end
+  puts "Age rating update complete (updated=#{updated})."
+end
+
+def cmd_attach(token, version_string, build_number)
+  build = cmd_wait_build(token, build_number, 45 * 60)
+  die("Build #{build_number} is not VALID.") unless build.dig("attributes", "processingState") == "VALID"
+  ver = version_for(token, version_string)
+  state = ver.dig("attributes", "appStoreState").to_s
+  unless %w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED REJECTED METADATA_REJECTED INVALID_BINARY].include?(state)
+    die("Version #{version_string} is in state #{state}, so a build was not attached and the app was not submitted.")
+  end
+  attach_build(token, ver["id"], build["id"])
+  cmd_status(token, version_string, build_number)
+end
+
 cmd = ARGV[0].to_s
 token = token_from_env
 case cmd
@@ -328,6 +417,12 @@ when "update-notes"
   notes = ENV["REVIEW_NOTES_BODY"].to_s
   die("REVIEW_NOTES_BODY is required.") if notes.empty?
   cmd_update_notes(token, ARGV[1].to_s.empty? ? "1.6.2" : ARGV[1], notes)
+when "list-certs"
+  cmd_list_certs(token)
+when "fix-age-rating"
+  cmd_fix_age_rating(token)
+when "attach"
+  cmd_attach(token, ARGV[1].to_s.empty? ? "1.6.2" : ARGV[1], ARGV[2].to_s.empty? ? "6" : ARGV[2])
 else
   die("Unknown command #{cmd}")
 end
