@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       command:
-        description: revoke, status, wait-build, withdraw-and-attach, update-notes, list-certs, fix-age-rating, or attach
+        description: revoke, status, wait-build, withdraw-and-attach, update-notes, list-certs, fix-age-rating, attach, export-notes, or resubmit-162
         required: true
         type: string
       cert_id:
@@ -61,8 +61,24 @@ jobs:
             attach)
               ruby .github/scripts/asc_ops.rb attach "${{ inputs.version }}" "${{ inputs.build }}"
               ;;
+            export-notes)
+              mkdir -p "$RUNNER_TEMP/asc-report"
+              ASC_REPORT_DIR="$RUNNER_TEMP/asc-report" ruby .github/scripts/asc_resubmit.rb export
+              ;;
+            resubmit-162)
+              mkdir -p "$RUNNER_TEMP/asc-report"
+              ASC_REPORT_DIR="$RUNNER_TEMP/asc-report" ruby .github/scripts/asc_resubmit.rb apply
+              ;;
             *)
               echo "Unknown command $cmd"
               exit 1
               ;;
           esac
+      - name: Upload redacted report
+        if: ${{ inputs.command == 'export-notes' || inputs.command == 'resubmit-162' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: asc-report
+          path: ${{ runner.temp }}/asc-report
+          if-no-files-found: error
+          retention-days: 7
