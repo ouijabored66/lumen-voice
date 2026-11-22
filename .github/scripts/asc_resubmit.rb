@@ -74,7 +74,22 @@ def call_api(method, path, token, body = nil, query = nil)
 end
 
 def error_detail(parsed)
-  parsed.dig("errors", 0, "detail") || parsed.dig("errors", 0, "title") || "The App Store Connect request failed."
+  errs = parsed["errors"] || []
+  return "The App Store Connect request failed." if errs.empty?
+  errs.map { |e|
+    bits = [e["code"], e["title"], e["detail"]].compact
+    assoc = e.dig("meta", "associatedErrors")
+    if assoc.is_a?(Hash)
+      assoc.each do |_k, list|
+        Array(list).each do |ae|
+          bits << [ae["code"], ae["title"], ae["detail"]].compact.join(" ")
+        end
+      end
+    elsif assoc
+      bits << "associated_errors_present"
+    end
+    bits.join(" — ")
+  }.join(" | ")
 end
 
 # Redact secrets but keep review setup URLs and the Drive link.
@@ -246,14 +261,33 @@ def cmd_apply(token)
   _ver2, attached2 = version_for(token)
   die("Build #{BUILD_NUMBER} is not attached after update.") unless attached2 && attached2["id"] == build["id"]
 
-  # Resubmit existing UNRESOLVED_ISSUES submission
+  # Resubmit existing UNRESOLVED_ISSUES submission.
+  # First mark rejected items resolved (App Store Connect "Update review"),
+  # then PATCH submitted=true ("Resubmit to App Review").
   scode, sparsed = call_api("GET", "/v1/reviewSubmissions/#{SUBMISSION_ID}", token)
   die("Could not read review submission (#{scode}). #{error_detail(sparsed)}") unless scode == 200
   state = sparsed.dig("data", "attributes", "state").to_s
   puts "reviewSubmission #{SUBMISSION_ID} state=#{state}"
   final_state = state
   submitted = false
+  resolved_items = 0
   if state == "UNRESOLVED_ISSUES"
+    icode, iparsed = call_api("GET", "/v1/reviewSubmissions/#{SUBMISSION_ID}/items", token, nil, {
+      "include" => "appStoreVersion",
+      "limit" => "50",
+    })
+    die("Could not list review submission items (#{icode}). #{error_detail(iparsed)}") unless icode == 200
+    items = iparsed["data"] || []
+    items.each do |item|
+      istate = item.dig("attributes", "state").to_s
+      puts "reviewSubmissionItem #{item['id']} state=#{istate}"
+      next unless istate == "REJECTED"
+      body = { data: { type: "reviewSubmissionItems", id: item["id"], attributes: { resolved: true } } }
+      rcode, rparsed = call_api("PATCH", "/v1/reviewSubmissionItems/#{item['id']}", token, body)
+      die("Could not resolve reviewSubmissionItem #{item['id']} (#{rcode}). #{error_detail(rparsed)}") unless [200, 204].include?(rcode)
+      resolved_items += 1
+      puts "Marked reviewSubmissionItem #{item['id']} resolved."
+    end
     body = { data: { type: "reviewSubmissions", id: SUBMISSION_ID, attributes: { submitted: true } } }
     pcode, presult = call_api("PATCH", "/v1/reviewSubmissions/#{SUBMISSION_ID}", token, body)
     if pcode >= 400
@@ -261,7 +295,7 @@ def cmd_apply(token)
     end
     submitted = true
     final_state = presult.dig("data", "attributes", "state").to_s
-    puts "Resubmitted reviewSubmission #{SUBMISSION_ID}. new_state=#{final_state.empty? ? 'unknown' : final_state}"
+    puts "Resubmitted reviewSubmission #{SUBMISSION_ID} after resolving #{resolved_items} item(s). new_state=#{final_state.empty? ? 'unknown' : final_state}"
   elsif %w[WAITING_FOR_REVIEW IN_REVIEW].include?(state)
     puts "Submission is already #{state}; not submitting again."
   else
@@ -280,7 +314,7 @@ def cmd_apply(token)
     "version" => { "id" => ver3["id"], "string" => VERSION, "state" => ver3.dig("attributes", "appStoreState"), "releaseType" => ver3.dig("attributes", "releaseType") },
     "attached_build_id" => attached3 && attached3["id"],
     "attached_build_number" => attached3 && attached3.dig("attributes", "version"),
-    "submission" => { "id" => SUBMISSION_ID, "state_before" => state, "state_after" => sattr2["state"], "submitted" => submitted, "submittedDate" => sattr2["submittedDate"], "platform" => sattr2["platform"] },
+    "submission" => { "id" => SUBMISSION_ID, "state_before" => state, "state_after" => sattr2["state"], "submitted" => submitted, "resolved_items" => resolved_items, "submittedDate" => sattr2["submittedDate"], "platform" => sattr2["platform"] },
     "resolution_center_reply" => "not_posted_official_api_unsupported",
   }
   write_file("report.json", JSON.pretty_generate(report))

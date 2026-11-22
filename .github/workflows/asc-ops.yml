@@ -75,7 +75,7 @@ jobs:
               ;;
           esac
       - name: Upload redacted report
-        if: ${{ inputs.command == 'export-notes' || inputs.command == 'resubmit-162' }}
+        if: ${{ always() && (inputs.command == 'export-notes' || inputs.command == 'resubmit-162') }}
         uses: actions/upload-artifact@v4
         with:
           name: asc-report
