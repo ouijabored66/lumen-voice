@@ -1,5 +1,7 @@
 # Lumen Voice
 
+App Store: https://apps.apple.com/app/id6836863521
+
 Source: https://github.com/ouijabored66/lumen-voice
 
 A free iPhone and Apple Watch voice app. You talk on the device. Lumen answers with one of three connections:
@@ -14,13 +16,17 @@ There is no subscription.
 
 ## Install Lumen on your iPhone (easy way)
 
+The easiest way is the App Store: https://apps.apple.com/app/id6836863521
+
+The GitHub release no longer includes an IPA. The sideload steps below are for a build you make yourself.
+
 This puts Lumen on the iPhone. It does not put it on the Apple Watch. The Watch needs the later section, [Installing the Apple Watch app from Linux](#installing-the-apple-watch-app-from-linux-free-apple-id).
 
 You need a computer (Windows or Mac), a cable, and a free Apple ID. A spare Apple ID is a good idea, so you are not typing the password for your main Apple ID into the install tool.
 
 The easiest tool is [Sideloadly](https://sideloadly.io) for Windows or Mac. [AltStore](https://altstore.io) and [SideStore](https://sidestore.io) can also install the same file. The steps below are Sideloadly's.
 
-1. Download [LumenVoice-1.6-unsigned.ipa](https://github.com/ouijabored66/lumen-voice/releases/download/v1.6/LumenVoice-1.6-unsigned.ipa). That file is not signed yet. Sideloadly signs it with your Apple ID.
+1. Use a local unsigned IPA you built from this repo (for example `LumenVoice-1.6-unsigned.ipa`). Sideloadly signs it with your Apple ID.
 2. Download Sideloadly from [sideloadly.io](https://sideloadly.io) and install it.
 3. Plug the iPhone into the computer. If the phone asks you to trust this computer, tap Trust and enter the phone passcode. Sideloadly should then show the phone. If it does not, install Apple's iTunes from Apple's website (not the Microsoft Store app), open iTunes once with the phone plugged in, and tap Trust again.
 4. Drag `LumenVoice-1.6-unsigned.ipa` onto the Sideloadly window.
@@ -199,7 +205,7 @@ GitHub Actions builds **LumenVoice-1.6-unsigned.ipa** (the iPhone app with the W
 
 1. Install [SideStore](https://sidestore.io) with your free Apple ID.
 2. Install [LiveContainer](https://github.com/LiveContainer/LiveContainer) through SideStore.
-3. Download [LumenVoice-1.6-unsigned.ipa](https://github.com/ouijabored66/lumen-voice/releases/download/v1.6/LumenVoice-1.6-unsigned.ipa) from the v1.6 release and import it into LiveContainer.
+3. Import a local unsigned IPA you built from this repo (for example `LumenVoice-1.6-unsigned.ipa`) into LiveContainer.
 
 LiveContainer cannot install a watch app. To put Lumen on the watch, install it as a normal app. See [Installing the Apple Watch app from Linux (free Apple ID)](#installing-the-apple-watch-app-from-linux-free-apple-id).
 
@@ -246,7 +252,7 @@ There is no helper script in this repo. The commands below are the published pym
 
 ### Re-sign every 7 days
 
-1. Start from the unsigned IPA on the v1.6 release (`LumenVoice-1.6-unsigned.ipa`).
+1. Start from a local unsigned IPA you built from this repo (`LumenVoice-1.6-unsigned.ipa`).
 2. If Developer Mode is hidden, reveal it with `pymobiledevice3 amfi reveal-developer-mode`, turn it on, and confirm after restart.
 3. Install the iPhone app in a pty and answer the certificate prompt: `script -qfec "xtool install --usb LumenVoice-1.6-unsigned.ipa" /tmp/xtool.log`.
 4. If Apple returns 409, wait a few seconds and run the install again.
