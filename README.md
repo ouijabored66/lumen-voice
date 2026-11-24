@@ -14,30 +14,9 @@ Speech uses Apple's on-device Speech and `AVSpeechSynthesizer`. Recordings stay 
 
 There is no subscription.
 
-## Install Lumen on your iPhone (easy way)
+## Install
 
-The easiest way is the App Store: https://apps.apple.com/app/id6836863521
-
-The GitHub release no longer includes an IPA. The sideload steps below are for a build you make yourself.
-
-This puts Lumen on the iPhone. It does not put it on the Apple Watch. The Watch needs the later section, [Installing the Apple Watch app from Linux](#installing-the-apple-watch-app-from-linux-free-apple-id).
-
-You need a computer (Windows or Mac), a cable, and a free Apple ID. A spare Apple ID is a good idea, so you are not typing the password for your main Apple ID into the install tool.
-
-The easiest tool is [Sideloadly](https://sideloadly.io) for Windows or Mac. [AltStore](https://altstore.io) and [SideStore](https://sidestore.io) can also install the same file. The steps below are Sideloadly's.
-
-1. Use a local unsigned IPA you built from this repo (for example `LumenVoice-1.6-unsigned.ipa`). Sideloadly signs it with your Apple ID.
-2. Download Sideloadly from [sideloadly.io](https://sideloadly.io) and install it.
-3. Plug the iPhone into the computer. If the phone asks you to trust this computer, tap Trust and enter the phone passcode. Sideloadly should then show the phone. If it does not, install Apple's iTunes from Apple's website (not the Microsoft Store app), open iTunes once with the phone plugged in, and tap Trust again.
-4. Drag `LumenVoice-1.6-unsigned.ipa` onto the Sideloadly window.
-5. Type the Apple ID, then start the install. Sideloadly asks for the Apple ID password, and for the two-factor code if Apple sends one. Wait until the Lumen Voice icon is on the Home Screen.
-6. On the iPhone, open Settings, then General, then VPN & Device Management (Sideloadly also calls this Profiles/VPN & Device Management). Tap the Apple ID email you just used, then tap Trust.
-7. Still in Settings, open Privacy & Security, scroll to Developer Mode, and turn the switch on. The phone asks you to restart. After it turns back on, confirm Developer Mode (tap Enable and enter the passcode). You may not see Developer Mode until the install in step 5 has finished.
-8. Open Lumen Voice.
-
-A free Apple ID only keeps the app working for 7 days. Before it stops opening, plug the phone in and install the same file again with the same Apple ID. Sideloadly also has an option to refresh the app for you. Leave that on only if the computer can stay on and the phone is plugged in, or on the same Wi-Fi with Sideloadly's Wi-Fi sideloading turned on.
-
-A free Apple ID can have 3 sideloaded apps on the phone at the same time. If you see "maximum number of installed apps using a free developer profile", delete one sideloaded app and try again. Apple also lets a free account create only 10 App IDs every 7 days. If you hit that, wait a few days or use another Apple ID.
+Get it on the App Store: https://apps.apple.com/app/id6836863521
 
 ### First launch
 
@@ -199,67 +178,11 @@ Replies can take up to about 2 minutes. The Watch stays awake while it shows "Lu
 
 When a task needs a yes or no, the Watch shows Approve and Deny. That only works in Run your own server mode, with `desktop/server.py` running. The tap goes to the iPhone, which talks to that computer. If the iPhone is out of reach, the request stays waiting. API key mode and Cloud / custom provider mode do not propose or run PC commands.
 
-### Sideload with a free Apple ID
-
-GitHub Actions builds **LumenVoice-1.6-unsigned.ipa** (the iPhone app with the Watch app inside). A free Apple ID can only hold a few App IDs, so install Lumen Voice inside one container:
-
-1. Install [SideStore](https://sidestore.io) with your free Apple ID.
-2. Install [LiveContainer](https://github.com/LiveContainer/LiveContainer) through SideStore.
-3. Import a local unsigned IPA you built from this repo (for example `LumenVoice-1.6-unsigned.ipa`) into LiveContainer.
-
-LiveContainer cannot install a watch app. To put Lumen on the watch, install it as a normal app. See [Installing the Apple Watch app from Linux (free Apple ID)](#installing-the-apple-watch-app-from-linux-free-apple-id).
-
-The workflow is `.github/workflows/build-ipa.yml`. It runs on pushes to `lumen-voice` and on pull requests into `watch-companion`.
-
-**Demo Mode** (Settings, top) runs the app with sample replies and no server, so you can try it before you add a key.
-
 ### Hands-free
 
 Settings → Hands-free → *Say "Lumen" to talk*. Recognition stays on the iPhone, and only while the app is open on screen. Say "Lumen", wait for the buzz, then speak.
 
 Siri: "Hey Siri, Ask Lumen".
-
-## Installing the Apple Watch app from Linux (free Apple ID)
-
-A free Apple ID can sideload 3 apps on a device and register 10 App IDs every 7 days. A watch app cannot be installed from inside LiveContainer, so Lumen has to be installed as a normal app. A free signature expires after 7 days.
-
-There is no helper script in this repo. The commands below are the published pymobiledevice3 commands. Stock xtool 1.24 still does not install the embedded watch app by itself.
-
-### Problems and fixes
-
-1. **xtool crashes at "Provisioning 33%"** with a NIO `epoll_ctl` error, `Operation not permitted`. It is waiting for a yes/no prompt (revoke an existing development certificate) and has no terminal. Run it in a pty and answer the prompt:
-
-   ```bash
-   script -qfec "xtool install --usb LumenVoice-1.6-unsigned.ipa" /tmp/xtool.log
-   ```
-
-2. **Apple returns 409** `no current iOS devices on this team`. The phone was just registered. Wait a few seconds and retry.
-
-3. **`InvalidCompanionAppBundleIdentifier` / `WatchKitAppBundleIDNotPrefixed`.** xtool prefixes the iPhone bundle ID (`XTL-<TEAM>.`) and leaves the watch app unprefixed. Set the watch app's `WKCompanionAppBundleIdentifier` to the prefixed iPhone bundle ID, `XTL-<TEAM>.ouijabored66.lumenvoice`.
-
-4. **"Maximum number of installed apps using a free developer profile".** Delete one sideloaded app, then remove its leftover provisioning profiles:
-
-   ```bash
-   ideviceprovision list
-   ideviceprovision remove <uuid>
-   ```
-
-5. **The watch Install button does nothing.** xtool 1.24 does not provision or sign `Watch/*.app`, does not register the paired watch as a device, and signs every bundle with the main app's entitlements. Build from the open watchOS work at [xtool pull request 350](https://github.com/xtool-org/xtool/pull/350). That change adds `xtool dev sign-watch` (a profile that lists registered watches, and it refuses to revoke a certificate automatically) and a Python helper under `tools/watchos` that installs through the paired iPhone's companion proxy (`com.apple.streaming_zip_conduit`). For this app's embedded watch bundle, the patch has to provision `Watch/*.app` and its plug-ins, register the paired watch as a device, and sign each bundle with its own profile and entitlements. The pull request is the source to build that from. It is experimental: `xtool install` still does not install a companion watch app on its own, and the helper wants exactly one watch already listed by the phone.
-
-6. **Developer Mode is missing on the watch.** watchOS hides it until a computer pairs with the watch. Install pymobiledevice3 (`pip install pymobiledevice3`). Plug in the iPhone and tap Trust. `pymobiledevice3 amfi reveal-developer-mode` only shows the switch under Settings, Privacy & Security. It does not turn Developer Mode on. Turn the switch on, let the watch restart, and confirm. If the watch has no passcode, `pymobiledevice3 amfi enable-developer-mode` requests that restart and can confirm the prompt. `pymobiledevice3 amfi developer-mode-status` prints true or false. Unlock the watch and tap Trust when it asks. The upstream helper's first pairing was not fully validated, so trust the computer on the watch before you install.
-
-7. Install the signed watch app with the helper from that pull request. Do not invent a second installer.
-
-### Re-sign every 7 days
-
-1. Start from a local unsigned IPA you built from this repo (`LumenVoice-1.6-unsigned.ipa`).
-2. If Developer Mode is hidden, reveal it with `pymobiledevice3 amfi reveal-developer-mode`, turn it on, and confirm after restart.
-3. Install the iPhone app in a pty and answer the certificate prompt: `script -qfec "xtool install --usb LumenVoice-1.6-unsigned.ipa" /tmp/xtool.log`.
-4. If Apple returns 409, wait a few seconds and run the install again.
-5. Set `WKCompanionAppBundleIdentifier` to `XTL-<TEAM>.ouijabored66.lumenvoice`.
-6. If the free profile is full, delete one sideloaded app and remove its profiles with `ideviceprovision`.
-7. Sign with a build of xtool from [pull request 350](https://github.com/xtool-org/xtool/pull/350) so `Watch/*.app`, its plug-ins, and the paired watch are covered, each bundle with its own profile and entitlements.
-8. Install the signed watch app with that pull request's `tools/watchos` helper, after the watch is already trusted.
 
 ### Talk button
 
