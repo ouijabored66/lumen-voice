@@ -254,3 +254,7 @@ Applied through Dylan's signed-in App Store Connect session:
 - Remaining to ship: run the App Store workflow on the feat branch
   (1.6.3 build 7 to TestFlight), attach the build to 1.6.3 in ASC,
   submit for review — Dylan's go.
+
+## TestFlight — 2026-11-26 20:00 CST
+
+Dylan reports the App Store workflow run passed: **1.6.3 build 7 is in TestFlight / App Store Connect**, ready to attach to the 1.6.3 version page. Remaining: Dylan attaches build 7 and submits for review.
