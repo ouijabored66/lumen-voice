@@ -920,30 +920,36 @@ final class LumenModel: ObservableObject {
     /// Only a failed status check (the server truly unreachable) reports "Couldn't
     /// reach …"; a slow task just keeps polling, up to ~10 minutes.
     private func watch(_ action: PCAction) async {
-        guard await actionStatus(action) != nil else {
+        guard let first = await actionStatus(action) else {
             fail("Couldn't reach \(action.server.label) to approve that.")
             return
         }
+        if deliverIfFinished(action, first) { return }
         for _ in 0..<150 {                                   // ~10 minutes at 4 s
             try? await Task.sleep(nanoseconds: 4_000_000_000)
             guard let obj = await actionStatus(action) else { continue }
-            guard let st = PCAction.Status(rawValue: (obj["status"] as? String) ?? "") else { continue }
-            if st == .running || st == .pending { continue }
-            let result = (obj["result"] as? String) ?? ""
-            updateAction(action.id) { $0.status = st; $0.result = result }
-            guard deliveredResults.insert(action.id).inserted else { return }
-            let finished = st == .done || st == .partial
-            let spoken = ((obj["spoken"] as? String) ?? (finished ? "Done." : "That didn't work.")).trimmingCharacters(in: .whitespacesAndNewlines)
-            let text = spoken.isEmpty ? (finished ? "Done." : "That didn't work.") : spoken
-            messages.append(ChatMessage(role: .lumen, text: text))
-            if speakReplies { demoVoice.speak(text) }
-            return
+            if deliverIfFinished(action, obj) { return }
         }
         fail("That task is still running on your PC. It will finish there; ask me again for the result.")
     }
 
+    /// True when `obj` was a terminal status and the result bubble was handled.
+    private func deliverIfFinished(_ action: PCAction, _ obj: [String: Any]) -> Bool {
+        guard let st = PCAction.Status(rawValue: (obj["status"] as? String) ?? "") else { return false }
+        if st == .running || st == .pending { return false }
+        let result = (obj["result"] as? String) ?? ""
+        updateAction(action.id) { $0.status = st; $0.result = result }
+        guard deliveredResults.insert(action.id).inserted else { return true }
+        let finished = st == .done || st == .partial
+        let spoken = ((obj["spoken"] as? String) ?? (finished ? "Done." : "That didn't work.")).trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = spoken.isEmpty ? (finished ? "Done." : "That didn't work.") : spoken
+        messages.append(ChatMessage(role: .lumen, text: text))
+        if speakReplies { demoVoice.speak(text) }
+        return true
+    }
+
     /// One status read for an action. Returns nil when the server can't be reached
-    /// (or the request can't be built); a 404 answer still decodes to a terminal miss.
+    /// (or the request can't be built). Non-200 answers (including 404) return nil.
     private func actionStatus(_ action: PCAction) async -> [String: Any]? {
         guard let r = request(action.server, "/api/action/\(action.id)", timeout: 30),
               let (data, resp) = try? await URLSession.shared.data(for: r),
