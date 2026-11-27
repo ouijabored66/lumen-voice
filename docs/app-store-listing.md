@@ -42,3 +42,15 @@ remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own
 ```
 
 Someone who wants this app searches for a way to talk to their own computer, run it from a phone, or keep an assistant on a private server. The subtitle carries private, computer, and assistant, and the keyword field uses the other 100 characters on the search words the name and subtitle do not already cover.
+
+## What's New (version 1.6.3)
+
+```
+New: Pair by QR code. Open the pair page on your desktop server and scan it in the app — no more typing the server URL and token by hand. Manual entry is still there if you prefer it.
+
+New: A guided first-run checklist walks through setup step by step.
+
+Fixed: The same answer could appear twice. It can't now.
+
+Fixed: Long-running tasks no longer end in a false "couldn't reach your server" error. Approved tasks now run in the background and the app checks back for the result.
+```
