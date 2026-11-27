@@ -240,3 +240,17 @@ Applied through Dylan's signed-in App Store Connect session:
   A 1.6.3 bump + new ASC version page unlocks all three fields, and
   one submission would carry the bug fixes, QR pairing, and all
   metadata together.
+
+## 1.6.3 version + full metadata — 2026-11-26 19:51 CST
+
+- Repo bumped to **1.6.3 (build 7)** on `feat/setup-friction-20261126`
+  and pushed (branch head 2fbd6cd at the time of this entry).
+- App Store Connect: **version 1.6.3 created** ("Prepare for
+  Submission"). On it, all set and saved and verified:
+  **Description** (new honest text), **Keywords**
+  (`remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own,ai,offline,terminal`),
+  **Subtitle** (`Private computer assistant`, on App Information),
+  **Promotional text** (carried over, already saved earlier).
+- Remaining to ship: run the App Store workflow on the feat branch
+  (1.6.3 build 7 to TestFlight), attach the build to 1.6.3 in ASC,
+  submit for review — Dylan's go.
