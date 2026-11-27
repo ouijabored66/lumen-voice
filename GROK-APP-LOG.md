@@ -170,3 +170,35 @@ That login is an Xcode/Developer Services session. `xtool ds` only has `teams`, 
 Push did not succeed, so the workflow was not dispatched. `gh` is not installed and there is no GitHub token, so `workflow_dispatch` cannot be sent from here either.
 
 After the push above, the remaining click is: GitHub → Actions → **App Store** → Run workflow → branch `feat/setup-friction-20261126` (1.6.2 build 6). Then paste the Description and Promotional text from `docs/app-store-listing.md` over the live listing.
+
+---
+
+## Keywords fix
+
+### What is live
+
+Public listing: [Lumen Voice + Watch](https://apps.apple.com/us/app/lumen-voice-watch/id6836863521) (`com.ouijabored66.lumenvoice`, id 6836863521, Dylan Reed, $2.99, version 1.6.2). iTunes lookup still returns the old description ("free (after $2.99 purchase)", "Free to use"). The page payload's lockup subtitle is the category **Productivity**. No separate 30-character marketing subtitle is in that payload. Keywords are not public, so the field could not be read from here.
+
+### Copy
+
+Written to `docs/app-store-listing.md` on `feat/setup-friction-20261126`.
+
+- Subtitle, proposed, 26 characters: `Private computer assistant`
+- Keywords, 100 characters, no spaces after commas: `remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own,ai,offline,terminal`
+
+Excluded because they are already in the store name: lumen, voice, watch. Excluded from keywords because they are in the proposed subtitle: private, computer, assistant. Singular only. No competitor names, no "app", no "free".
+
+### App Store Connect — blocked
+
+Same route as the follow-up, rechecked this run. Nothing new can write the listing.
+
+- `xtool auth status` is still the Apple ID session (`dylanpreed1995@gmail.com`, team `34X2T5QXVU`). `xtool ds` still has only teams, certificates, identifiers, devices, profiles, and anisette. No keywords command.
+- `~/Downloads/AuthKey_PUA6HLZXWU.p8` is still the only API key file. `ASC_ISSUER_ID` is unset and is not in the repo or elsewhere on this host. The App Store Connect JWT cannot be signed without it. `ruby` is not installed.
+- Chromium has no `appstoreconnect.apple.com` login cookies. The IndexedDB folder for that host is not a session.
+- `gh` is not installed. `GITHUB_TOKEN` and `GH_TOKEN` are unset. `origin` is still HTTPS with no credential helper. The public **ASC ops** workflow on `main` (`.github/workflows/asc-ops.yml`) cannot be dispatched from here, and this branch still cannot be pushed.
+
+### Report
+
+Keywords **blocked**: no App Store Connect issuer id, no web session, and no GitHub token to dispatch the ops workflow.
+
+Final keyword string: `remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own,ai,offline,terminal`

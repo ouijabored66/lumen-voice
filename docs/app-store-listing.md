@@ -26,3 +26,19 @@ Privacy policy: https://github.com/ouijabored66/lumen-voice/blob/main/PRIVACY.md
 Needs the free desktop server on your computer (Windows, Linux, or Mac). Pair in about 5–10 minutes with a QR code. $2.99 one-time purchase. No subscription.
 
 (157 characters, App Store Connect limit is 170.)
+
+## Keywords
+
+Store name: **Lumen Voice + Watch**. Apple already indexes lumen, voice, and watch from that name, so those words are not repeated below.
+
+Subtitle (proposed, 26 characters): `Private computer assistant`
+
+The public App Store page shows no custom subtitle. The line under the name is the category Productivity, so the 30-character field looks unused. Paste this subtitle only if App Store Connect still has that field empty or filled with something that does not say what the app does.
+
+Keywords (100 characters, no spaces after commas):
+
+```
+remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own,ai,offline,terminal
+```
+
+Someone who wants this app searches for a way to talk to their own computer, run it from a phone, or keep an assistant on a private server. The subtitle carries private, computer, and assistant, and the keyword field uses the other 100 characters on the search words the name and subtitle do not already cover.
