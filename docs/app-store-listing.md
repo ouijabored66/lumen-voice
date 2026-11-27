@@ -6,7 +6,7 @@ Paste these into App Store Connect. Do not treat them as already submitted.
 
 Lumen Voice needs a free desktop companion server on your own computer. The server runs on Windows, Linux, or Mac. The first setup takes about five to ten minutes: start the server, open the pair page it prints, and scan that QR code in the app (you can type the URL and token instead). After that, you talk on your iPhone or Apple Watch and Lumen answers using your hardware.
 
-This is a one-time purchase. There is no subscription.
+$2.99 one-time purchase. No subscription.
 
 What the app does:
 
@@ -23,6 +23,6 @@ Privacy policy: https://github.com/ouijabored66/lumen-voice/blob/main/PRIVACY.md
 
 ## Promotional text
 
-Needs the free desktop server on your computer (Windows, Linux, or Mac). Pair in about 5–10 minutes with a QR code. One-time purchase, no subscription.
+Needs the free desktop server on your computer (Windows, Linux, or Mac). Pair in about 5–10 minutes with a QR code. $2.99 one-time purchase. No subscription.
 
-(151 characters, App Store Connect limit is 170.)
+(157 characters, App Store Connect limit is 170.)
