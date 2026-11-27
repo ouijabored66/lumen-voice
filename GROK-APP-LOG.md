@@ -202,3 +202,41 @@ Same route as the follow-up, rechecked this run. Nothing new can write the listi
 Keywords **blocked**: no App Store Connect issuer id, no web session, and no GitHub token to dispatch the ops workflow.
 
 Final keyword string: `remote,control,pc,desktop,server,local,speech,talk,command,linux,windows,mac,own,ai,offline,terminal`
+
+## Correction — 2026-11-26 19:41 CST (Lumen, at Dylan's direction)
+
+Supersedes the "push blocked" notes above (Update 1, Update 2,
+follow-up, and Keywords fix sections):
+
+- Dylan added the desktop's SSH key (`~/.ssh/id_ed25519.pub`,
+  dylanr@PikaDesktop) to his GitHub account.
+- Lumen switched the repo remote to SSH
+  (`git@github.com:ouijabored66/lumen-voice.git`) and **pushed both
+  branches successfully**: `fix/app-bugs-20261126` (862fb99) and
+  `feat/setup-friction-20261126` (e8d8992, includes the $2.99 listing
+  commit and the keywords commit). Verified with `git ls-remote`.
+- Desktop pushes work over SSH from now on; the earlier HTTPS
+  "terminal prompts disabled" failures no longer apply.
+- Remaining App Store Connect listing paste is being done through
+  Dylan's signed-in App Store Connect browser session (description,
+  promotional text, keywords, subtitle) — outcome to be logged when
+  it completes.
+
+## App Store Connect listing outcome — 2026-11-26 19:46 CST
+
+Applied through Dylan's signed-in App Store Connect session:
+
+- **Promotional text: CHANGED AND SAVED** (verified on the version
+  page). This field is editable on the live version.
+- **Description: NOT changed — locked.** Live version 1.6.2 is
+  "Ready for Distribution"; the field is disabled. Old text remains.
+- **Keywords: NOT changed — locked**, same reason. Old keywords
+  remain live.
+- **Subtitle: NOT changed — locked and currently empty.** Releases
+  only with a new app version.
+- Note: because 1.6.2 is already the live version, the next release
+  must be **1.6.3+** — the branches' 1.6.2 build 6 can go to
+  TestFlight but cannot be submitted as a new App Store version.
+  A 1.6.3 bump + new ASC version page unlocks all three fields, and
+  one submission would carry the bug fixes, QR pairing, and all
+  metadata together.
