@@ -37,8 +37,9 @@ A free Apple ID can have 3 sideloaded apps on the phone at the same time. If you
 
 The first screen says "How should Lumen think?"
 
-- To try it with no key and no server: close that screen, tap the sliders button at the top, and turn on Demo Mode under "Try it without a server". You get sample replies. Nothing is sent off the phone.
+- To try it with no key and no server: tap **Try Demo Mode**, or close that screen, tap the sliders button at the top, and turn on Demo Mode under "Try it without a server". You get sample replies. Nothing is sent off the phone.
 - To use your own key: tap Use your API key, paste a Grok, Claude, Gemini, Groq, or OpenRouter key, and tap Save and connect. When it works you see "Connected to …", and the screen shows only the last four characters of the key.
+- To use the desktop server: start it on the computer (next section), open the `/pair` page it prints, then in the app choose **Run your own server** and tap **Scan QR code**. You can still type the URL and token by hand.
 
 ## Desktop server
 
@@ -46,7 +47,7 @@ The first screen says "How should Lumen think?"
 python3 desktop/server.py
 ```
 
-On first run it writes `desktop/config.json` (gitignored) with a random token and prints that token plus the LAN URL. In the iPhone app choose **Run your own server** and enter them.
+On first run it writes `desktop/config.json` (gitignored) with a random token and prints a pair page such as `http://192.168.x.x:8787/pair`. Open that page on the computer (the QR is drawn locally; the token never goes to a web QR service). In the iPhone app choose **Run your own server** and tap **Scan QR code**, or type the URL and token by hand.
 
 The listen port is `8787` unless `desktop/config.json` or the environment says otherwise:
 
@@ -109,17 +110,10 @@ This runs the small server on your Windows computer so the iPhone can use it. Th
 2. Install Python. Open [python.org/downloads/windows](https://www.python.org/downloads/windows/) and download Python 3.12. Run the installer. On the first screen, check **Add python.exe to PATH**, then click **Install Now**. When it finishes, close the blue window, open PowerShell again, type `python --version`, and press Enter. You should see `Python 3.12`. If it says Python was not found, the PATH box was not checked. Run the installer again and check it.
 3. Download Lumen. Open [github.com/ouijabored66/lumen-voice](https://github.com/ouijabored66/lumen-voice). Click the green **Code** button, then **Download ZIP**. In your Downloads folder, right-click the zip, click **Extract All**, then **Extract**. You get a folder named `lumen-voice-main`.
 4. Start the server. In the blue window, type `cd` and a space. Drag the `lumen-voice-main` folder onto the window, then press Enter. Type `python desktop\server.py` and press Enter. Leave this window open. Closing it stops the server.
-5. Read the address and the token. The window prints `Lumen desktop server`, then lines like this:
-
-   ```text
-   In the iPhone app choose Run your own server and enter:
-
-     URL    http://…:8787
-     Token  (a long random string)
-   ```
+5. Read the pair page. The window prints `Lumen desktop server`, then a line like `http://…:8787/pair`. Open that address in a browser on this computer. In the iPhone app choose **Run your own server** and tap **Scan QR code**. You can still type the URL and token by hand if you prefer.
 
    The numbers after `http://` are your computer's address. Use a line that does not say `127.0.0.1`. The token is the line that starts with `Token`. The first run also saves both in `desktop\config.json`, inside the folder you unzipped.
-6. Type them into the iPhone. Open Lumen. On the screen that says "How should Lumen think?", tap **Run your own server**. You will see **Your server**, a box that says `https://…`, and **Server token**. Paste the URL into the box and the token into Server token. Tap **Save and connect**. If you already closed that screen, tap the sliders button at the top. The screen title is Settings. Set **Connection** to **Run your own server**, fill in the same two lines, and tap **Save and connect**. When it works, that row says Online or In use.
+6. Pair the iPhone. Open Lumen. On the screen that says "How should Lumen think?", tap **Run your own server**, then **Scan QR code**, and point the camera at the pair page from step 5. If you would rather type: you will see **Your server**, a box that says `https://…`, and **Server token**. Paste the URL into the box and the token into Server token. Tap **Save and connect**. If you already closed that screen, tap the sliders button at the top. The screen title is Settings. Set **Connection** to **Run your own server**, scan or fill in the same two lines, and tap **Save and connect**. When it works, that row says Online or In use.
 7. Allow the firewall prompt. Windows may show a window that says it blocked some features of Python. Check **Private networks**. Leave **Public networks** unchecked. Click **Allow access**. If you click Cancel, the phone on your Wi-Fi cannot connect.
 8. Keep it running when you sign in. You only need to do this after the window has printed a URL once. Click Start, type `Task Scheduler`, and open it. Click **Create Basic Task**. Name it `Lumen Desktop Server` and click Next. Choose **When I log on**, then Next. Choose **Start a program**, then Next. In Program/script, click Browse and choose `python.exe` (the same Python from step 2). In Add arguments, type `desktop\server.py`. In Start in, paste the path of the `lumen-voice-main` folder. Click Next, then Finish. After the next sign-in you will not see the blue window. The address and token stay the ones already printed.
 

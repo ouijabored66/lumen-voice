@@ -336,6 +336,61 @@ final class LumenModel: ObservableObject {
         }
     }
 
+    /// Store URL + token from a `/pair` QR (Keychain for the token), then test `GET /health`.
+    func applyPairing(_ raw: String) async -> PairingOutcome {
+        guard let payload = PairingPayload.parse(raw) else { return .invalid }
+        setLinkMode(provider: false)
+        setServerToken(payload.token, for: .home)
+        let first = payload.urls.first ?? ""
+        if !first.isEmpty { serverURL = first }
+        var last: PairingOutcome = .unreachable
+        for candidate in payload.urls {
+            let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            serverURL = trimmed
+            switch await healthProbe(.home) {
+            case .ok(_, let os):
+                noteServerOS(os)
+                await verifyServer(.home)
+                if case .some(.connected(let name)) = serverLink[ServerID.home.rawValue] {
+                    return .connected(name)
+                }
+                let host = URL(string: trimmed)?.host ?? "your server"
+                return .connected(host)
+            case .rejected:
+                last = .rejected
+            case .unreachable:
+                last = .unreachable
+            }
+        }
+        if !first.isEmpty { serverURL = first }
+        return last
+    }
+
+    static func pairingNote(_ outcome: PairingOutcome) -> String {
+        switch outcome {
+        case .connected(let name): return "Connected to \(name)."
+        case .rejected: return "That token was rejected. Open /pair on the computer running the desktop server and scan again."
+        case .unreachable: return "Can't reach the server. Is it running, and is this iPhone on the same network?"
+        case .invalid: return "That isn't a Lumen pairing QR. On the computer, open the /pair page the server printed and scan that."
+        }
+    }
+
+    private func healthProbe(_ s: ServerID) async -> Probe {
+        guard let r = request(s, "/health", timeout: 8) else { return .unreachable }
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: r)
+            let http = resp as? HTTPURLResponse
+            let code = http?.statusCode ?? 0
+            if code == 401 || code == 403 { return .rejected }
+            let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+            guard code == 200, (json["ok"] as? Bool) != false else { return .unreachable }
+            return .ok(json, ServerOS.read(response: http, data: data))
+        } catch {
+            return .unreachable
+        }
+    }
+
     private func setServerLink(_ s: ServerID, _ status: ServerLinkStatus) {
         var next = serverLink
         next[s.rawValue] = status

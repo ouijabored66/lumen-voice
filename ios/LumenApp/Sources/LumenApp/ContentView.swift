@@ -49,6 +49,13 @@ struct ContentView: View {
         }
         .onOpenURL { url in
             if url.host == "listen" { model.beginTalking() }
+            if url.host == "pair" || url.path.contains("pair") {
+                Task {
+                    let outcome = await model.applyPairing(url.absoluteString)
+                    if case .connected = outcome { showOnboarding = false }
+                    else { showSettings = true }
+                }
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // Re-check both connections whenever the app comes to the front.

@@ -176,6 +176,28 @@ def lan_ips() -> list[str]:
     return ips or ["127.0.0.1"]
 
 
+def public_urls(port: int) -> list[str]:
+    """Addresses the phone can try, LAN first. 127.0.0.1 is last-resort only."""
+    urls = [f"http://{ip}:{port}" for ip in lan_ips() if not ip.startswith("127.")]
+    if not urls:
+        urls = [f"http://127.0.0.1:{port}"]
+    return urls
+
+
+def pairing_payload(urls: list[str], token: str) -> str:
+    """Compact JSON the iPhone app scans. Token never goes to a third-party QR API."""
+    return json.dumps({"lumen": 1, "urls": list(urls), "token": token}, separators=(",", ":"))
+
+
+def _html_esc(text: str) -> str:
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 def post_json(url: str, payload: dict, headers: dict, timeout: int = 60) -> dict:
     data = json.dumps(payload).encode()
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
@@ -435,12 +457,50 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         return self.rfile.read(n) if n else b""
 
+    def _html(self, code: int, body: str) -> None:
+        raw = body.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def _pair_page(self) -> None:
+        port = int(CONFIG.get("port") or 8787)
+        token = str(CONFIG.get("token") or "")
+        urls = public_urls(port)
+        payload = pairing_payload(urls, token)
+        try:
+            import qr
+
+            picture = qr.svg(payload)
+        except Exception:
+            picture = (
+                "<p class='warn'>QR drawing failed on this computer. "
+                "Copy the URL and token into the app instead.</p>"
+            )
+        url_rows = "".join(
+            f"<li><code id='url-{i}'>{_html_esc(u)}</code></li>" for i, u in enumerate(urls)
+        )
+        self._html(
+            200,
+            PAIR_PAGE.format(
+                svg=picture,
+                urls=url_rows,
+                token=_html_esc(token),
+                payload=_html_esc(payload),
+            ),
+        )
+
     def do_GET(self):
-        if not self._authed():
-            return
         path = self.path.split("?")[0]
         if len(path) > 1 and path.endswith("/"):
             path = path[:-1]
+        if path == "/pair":
+            return self._pair_page()
+        if not self._authed():
+            return
         os_name = host_os()
         if path in ("/health", "/v1/health", "/info", "/v1/info"):
             self._json(200, {"ok": True, "os": os_name})
@@ -552,6 +612,55 @@ def _action_path(path: str) -> tuple[str, str]:
     return parts[0], (parts[1] if len(parts) > 1 else "")
 
 
+PAIR_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pair Lumen Voice</title>
+<style>
+  :root {{ color-scheme: dark; }}
+  body {{ margin: 0; font-family: system-ui, sans-serif; background: #140e08; color: #f4ead8;
+         display: flex; justify-content: center; padding: 32px 16px; }}
+  main {{ max-width: 36rem; }}
+  h1 {{ font-size: 1.5rem; font-weight: 650; color: #ffc24a; margin: 0 0 8px; }}
+  p, li {{ line-height: 1.45; }}
+  .qr {{ background: #fff; padding: 16px; border-radius: 12px; display: inline-block; margin: 12px 0; }}
+  .qr svg {{ display: block; }}
+  code, pre {{ font-family: ui-monospace, monospace; background: #24180f; padding: 2px 6px;
+               border-radius: 6px; word-break: break-all; }}
+  pre {{ padding: 10px 12px; overflow-x: auto; }}
+  .warn {{ color: #ffb4a2; }}
+  button {{ background: #ffc24a; color: #1a1208; border: 0; border-radius: 8px; padding: 6px 10px;
+            font-weight: 650; cursor: pointer; margin-left: 8px; }}
+  footer {{ margin-top: 24px; color: #b9a894; font-size: 0.9rem; }}
+</style>
+</head>
+<body>
+<main>
+  <h1>Pair Lumen Voice</h1>
+  <p>On your iPhone, open Lumen Voice, choose <strong>Run your own server</strong>, and tap <strong>Scan QR code</strong>. Point the camera at this square. The address and token stay on this computer until the phone saves them.</p>
+  <div class="qr">{svg}</div>
+  <p>Or type these by hand:</p>
+  <ul>{urls}</ul>
+  <p>Token <code id="token">{token}</code>
+     <button type="button" onclick="copy('token')">Copy token</button></p>
+  <p>Raw pairing payload (same as the QR):</p>
+  <pre id="payload">{payload}</pre>
+  <footer>Anyone on this network who opens this page can see the token. Don't publish this page on the open internet. The provider key is not shown here.</footer>
+</main>
+<script>
+function copy(id) {{
+  const el = document.getElementById(id);
+  const text = el ? el.innerText : "";
+  if (navigator.clipboard && text) navigator.clipboard.writeText(text);
+}}
+</script>
+</body>
+</html>
+"""
+
+
 def main() -> None:
     port = int(CONFIG.get("port") or 8787)
     name, kind = backend()
@@ -562,10 +671,15 @@ def main() -> None:
         print("  No provider key yet. Set LUMEN_PROVIDER_KEY or provider_key in desktop/config.json.")
         print("  Until then, text is sent to local Ollama if it is running.")
     print()
-    print("In the iPhone app choose Run your own server and enter:")
+    print("Pair the iPhone: open this page on this computer and scan the QR in Lumen Voice:")
     print()
-    for ip in lan_ips():
-        print(f"  URL    http://{ip}:{port}")
+    for url in public_urls(port):
+        print(f"  {url}/pair")
+    print()
+    print("Or in the app choose Run your own server and enter:")
+    print()
+    for url in public_urls(port):
+        print(f"  URL    {url}")
     print(f"  Token  {CONFIG.get('token')}")
     print()
     print("Away from home, publish this server with Tailscale (tailscale serve) or another")

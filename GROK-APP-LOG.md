@@ -61,3 +61,32 @@ No credential workarounds attempted. Branch is local only: `19a6111` on top of `
 - With the saved Bearer token → HTTP 200 `{"ok": true, "os": "linux"}` (`X-Server-OS: linux`)
 
 The async approve path from this branch is the live desktop server.
+
+---
+
+## Update 2 — setup-friction (`feat/setup-friction-20261126`)
+
+Full writeup: `SETUP-FIX-LOG.md`. Headline:
+
+- Pairing payload is local JSON `{"lumen":1,"urls":[...],"token":"..."}` in a QR drawn on the desktop with vendored Nayuki (`desktop/qrcodegen.py`). `GET /pair` is unauthenticated HTML; token never goes to a web QR API; provider key is not on that page.
+- iOS: Scan QR in onboarding (4-step checklist, skippable, Demo Mode kept) and Settings; Keychain storage; `/health` connection test; manual URL+token fallback.
+- `docs/app-store-listing.md` has description **and** promotional text (151 characters), de-scammed, for Dylan to paste. Not submitted to App Store Connect from here.
+- Version **1.6.2** build **6**.
+- Verified: `desktop/check_pair.py` and `desktop/check_actions.py` pass. After restart, live `GET /pair` is 200 with SVG; `GET /health` 401/200 as before.
+- iOS not compiled (no Swift / xtool SDK). Push / Actions / listing paste are Dylan's, same path as Update 1.
+
+### Dylan — ship Update 2 (1.6.2 build 6) to TestFlight
+
+1. From a machine that is logged into GitHub:
+   ```
+   cd ~/src/lumen-voice
+   git checkout feat/setup-friction-20261126
+   git push -u origin feat/setup-friction-20261126
+   ```
+   If HTTPS still prompts, use SSH (`git remote set-url origin git@github.com:ouijabored66/lumen-voice.git`) or GitHub Desktop / the website to publish the branch.
+2. GitHub → **Actions** tab → workflow **App Store** → **Run workflow**.
+3. Branch dropdown: `feat/setup-friction-20261126` → **Run workflow**.
+4. Wait for the macOS job to archive `ios/LumenVoice.xcodeproj` (scheme `LumenVoice`, version **1.6.2** build **6**) and upload to TestFlight. Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`.
+5. App Store Connect: paste **Description** and **Promotional text** from `docs/app-store-listing.md`, then submit that TestFlight build for review when you want it public.
+
+**Update 2 status: code on branch, awaiting Dylan's push (if needed) and workflow run.** Also paste listing text; that is not done from this host.

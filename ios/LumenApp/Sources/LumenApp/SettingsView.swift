@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var drafts: [ServerID: String] = [:]
     @State private var providerDraft = ""
     @State private var checking = false
+    @State private var pairNote = ""
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,7 @@ struct SettingsView: View {
                          ? "A local or cloud chat address. Auto tries the local URL first."
                          : model.usesProvider
                          ? "One provider key. Speech and the voice stay on this iPhone."
-                         : "The small desktop server keeps the provider key on your computer. Run python3 desktop/server.py and enter the URL and token it prints.")
+                         : "The small desktop server keeps the provider key on your computer. Run python3 desktop/server.py, open the /pair page it prints, and scan the QR — or type the URL and token.")
                 }
 
                 if model.usesCustom {
@@ -79,6 +80,21 @@ struct SettingsView: View {
                         Text("Detected from the key: Grok, Claude, Gemini, Groq, or OpenRouter. It is stored only in the Keychain on this iPhone, and the screen shows the last four characters.")
                     }
                 } else {
+                    Section {
+                        PairScanButton { outcome in
+                            urls[.home] = model.serverURL
+                            pairNote = LumenModel.pairingNote(outcome)
+                        }
+                        if !pairNote.isEmpty {
+                            Text(pairNote)
+                                .font(.footnote)
+                                .foregroundStyle(pairNote.hasPrefix("Connected") ? Theme.accent : .red)
+                        }
+                    } header: {
+                        Text("Pair")
+                    } footer: {
+                        Text("On the computer running python3 desktop/server.py, open the /pair page it printed and scan that QR. The token is stored in the Keychain on this iPhone.")
+                    }
                     ForEach(ServerID.allCases) { s in
                         Section {
                             TextField("https://…", text: binding(for: s, in: $urls))

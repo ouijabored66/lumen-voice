@@ -14,8 +14,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "1.6.1"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.6.2"
+    CURRENT_PROJECT_VERSION: "6"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
     # Sideload builds keep these IDs. The App Store workflow overrides them
@@ -57,6 +57,8 @@ targets:
           Lumen listens on this iPhone, after you say "Lumen" or hold the microphone, and turns that into text on the device.
         NSSpeechRecognitionUsageDescription: >-
           Lumen uses on-device speech recognition to hear "Lumen" and to turn what you say into text. This stays on your iPhone.
+        NSCameraUsageDescription: >-
+          Lumen uses the camera only to scan the QR code on your desktop server's pairing page, so it can save the server address and token. The image is not stored or sent anywhere.
         NSLocalNetworkUsageDescription: >-
           Lumen connects to your own server on the local network when you choose Run your own server.
         NSAppTransportSecurity:

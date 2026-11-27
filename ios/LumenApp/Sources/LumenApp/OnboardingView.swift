@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @State private var urls: [ServerID: String] = [:]
     @State private var drafts: [ServerID: String] = [:]
     @State private var busy = false
+    @State private var pairNote = ""
 
     private enum Choice { case provider, server, custom }
 
@@ -25,12 +26,13 @@ struct OnboardingView: View {
                         Text("Speech stays on this iPhone. One key is enough, or you can run the small server on your computer.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                        skipRow
                         choiceButton("Use your API key", "Grok, Claude, Gemini, Groq, or OpenRouter. The key stays in the iPhone Keychain.", .provider)
-                        choiceButton("Run your own server", "A URL and token from python3 desktop/server.py. The provider key stays on that computer.", .server)
+                        choiceButton("Run your own server", "Start the desktop server, then scan its QR. The provider key stays on that computer.", .server)
                         choiceButton("Cloud / custom provider", "A local or cloud chat address. Auto tries the local URL first.", .custom)
                         ServerOSIndicators(os: model.litServerOS)
                         if choice == .provider { providerForm }
-                        if choice == .server { serverForm }
+                        if choice == .server { serverChecklist }
                         if choice == .custom { customForm }
                     }
                     .padding(22)
@@ -38,10 +40,29 @@ struct OnboardingView: View {
             }
             .navigationTitle("Lumen Voice")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") { onDone() }
+                }
+            }
         }
         .tint(Theme.accent)
         .onAppear {
             for s in ServerID.allCases { urls[s] = model.url(s) }
+        }
+    }
+
+    private var skipRow: some View {
+        HStack(spacing: 12) {
+            Button("Skip for now") { onDone() }
+                .font(.footnote.weight(.semibold))
+            Button("Try Demo Mode") {
+                Task {
+                    await model.setDemoMode(true)
+                    onDone()
+                }
+            }
+            .font(.footnote.weight(.semibold))
         }
     }
 
@@ -84,6 +105,73 @@ struct OnboardingView: View {
         }
     }
 
+    private var serverChecklist: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            checklistRow(1, done: serverConnected, title: "Start the desktop server") {
+                Text("On your computer, in the Lumen Voice folder, run:")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text("python3 desktop/server.py")
+                    .font(.system(.footnote, design: .monospaced))
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text("It prints a pair page such as http://192.168.x.x:8787/pair. Open that page on the computer so you can see the QR code. About five to ten minutes the first time.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            checklistRow(2, done: serverConnected, title: "Pair by QR (or type it)") {
+                PairScanButton { outcome in
+                    urls[.home] = model.serverURL
+                    pairNote = LumenModel.pairingNote(outcome)
+                }
+                Text("Or type the URL and token from that page:")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                serverForm
+            }
+            checklistRow(3, done: serverConnected, title: "Connection test") {
+                if !pairNote.isEmpty {
+                    Text(pairNote)
+                        .font(.footnote)
+                        .foregroundStyle(serverConnected ? Theme.accent : .red)
+                }
+                ForEach(ServerID.allCases) { s in
+                    serverStatus(s)
+                }
+            }
+            checklistRow(4, done: serverConnected, title: "Done — try a command") {
+                if serverConnected {
+                    Text("You're paired. Hold the microphone or type a question. Tasks that change the computer wait for your Approve tap.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button("Continue") { onDone() }
+                        .font(.headline)
+                } else {
+                    Text("Pair first. Then come back here, or skip and try Demo Mode from Settings.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var serverConnected: Bool {
+        ServerID.allCases.contains { if case .some(.connected) = model.serverLink[$0.rawValue] { return true }; return false }
+    }
+
+    private func checklistRow<Content: View>(_ number: Int, done: Bool, title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                    .foregroundStyle(done ? Theme.accent : .secondary)
+                Text(title).font(.headline)
+            }
+            content()
+                .padding(.leading, 28)
+        }
+    }
+
     private var serverForm: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(ServerID.allCases) { s in
@@ -96,7 +184,6 @@ struct OnboardingView: View {
                             suffix: model.serverSuffix[s.rawValue] ?? "", draft: draftBinding(s)) {
                     model.clearServerToken(s)
                 }
-                serverStatus(s)
             }
             Button {
                 busy = true
@@ -115,8 +202,12 @@ struct OnboardingView: View {
                         }
                     }
                     busy = false
-                    if ServerID.allCases.contains(where: { if case .some(.connected) = model.serverLink[$0.rawValue] { return true }; return false }) {
-                        onDone()
+                    if serverConnected {
+                        pairNote = LumenModel.pairingNote(.connected(model.assistantTitle))
+                    } else if ServerID.allCases.contains(where: { if case .some(.rejected) = model.serverLink[$0.rawValue] { return true }; return false }) {
+                        pairNote = LumenModel.pairingNote(.rejected)
+                    } else {
+                        pairNote = LumenModel.pairingNote(.unreachable)
                     }
                 }
             } label: {

@@ -3,15 +3,17 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleShortVersionString</key>
-    <string>1.6.1</string>
+    <string>1.6.2</string>
     <key>CFBundleVersion</key>
-    <string>5</string>
+    <string>6</string>
     <key>CFBundleDisplayName</key>
     <string>Lumen Voice</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Lumen listens on this iPhone, after you say "Lumen" or hold the microphone, and turns that into text on the device.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Lumen uses on-device speech recognition to hear "Lumen" and to turn what you say into text. This stays on your iPhone.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Lumen uses the camera only to scan the QR code on your desktop server's pairing page, so it can save the server address and token. The image is not stored or sent anywhere.</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
