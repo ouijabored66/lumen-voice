@@ -11,6 +11,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import actions
 
 
+def _settled(queue, ident, timeout=30.0):
+    """Poll until an approved task leaves running (approve runs in the background)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        item = queue.get(ident)
+        if item is None:
+            return None
+        if item["status"] not in ("pending", "running"):
+            return item
+        time.sleep(0.05)
+    return queue.get(ident)
+
+
 def main() -> None:
     prose = actions.proposal_from_text("Disk space looks fine today.")
     assert prose is None, prose
@@ -62,7 +75,9 @@ def main() -> None:
     assert not os.path.exists(marker)
 
     live = queue.enqueue("Write a marker", command)
-    done = queue.approve(live["id"])
+    started = queue.approve(live["id"])
+    assert started and started["status"] == "running", started
+    done = _settled(queue, live["id"])
     assert done and done["status"] == "done", done
     assert done.get("spoken", "").startswith("Done.")
     with open(marker, encoding="utf-8") as handle:
@@ -115,7 +130,8 @@ def main() -> None:
         )
     try:
         partial = queue.enqueue("Check disk space", f"{sys.executable} {script}")
-        reported = queue.approve(partial["id"])
+        queue.approve(partial["id"])
+        reported = _settled(queue, partial["id"])
     finally:
         try:
             os.remove(script)
@@ -127,7 +143,8 @@ def main() -> None:
 
     fail_cmd = f"{sys.executable} -c \"import sys; sys.stderr.write('nope\\n'); sys.exit(2)\""
     missed = queue.enqueue("Fail", fail_cmd)
-    failed = queue.approve(missed["id"])
+    queue.approve(missed["id"])
+    failed = _settled(queue, missed["id"])
     assert failed and failed["status"] == "failed", failed
     assert "didn't work" in failed["spoken"].lower(), failed
 
@@ -148,7 +165,7 @@ def main() -> None:
     assert "posix" in linux_hint and "debian" in linux_hint
     assert "sfc" in linux_hint and "dism" in linux_hint and "chkdsk" in linux_hint
     assert "systemctl --failed" in linux_hint
-    assert "journalctl -p 3 -b --no-pager | tail -n 50" in linux_hint
+    assert "journalctl -p 3 --since -24h --no-pager | tail -n 50" in linux_hint
     assert "apt list --upgradable" in linux_hint and "pikman" in linux_hint
     assert "flatpak remote-ls --updates" in linux_hint and "df -h" in linux_hint
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "server.py"), encoding="utf-8").read()
@@ -180,7 +197,7 @@ def main() -> None:
 
     assert actions.os_mismatch("systemctl --failed", "win32")
     assert "linux command" in actions.os_mismatch("systemctl --failed", "win32").lower()
-    assert actions.os_mismatch("journalctl -p 3 -b --no-pager | tail -n 50", "win32")
+    assert actions.os_mismatch("journalctl -p 3 --since -24h --no-pager | tail -n 50", "win32")
     assert actions.os_mismatch("apt list --upgradable", "win32")
     assert actions.os_mismatch("pikman update", "win32")
     assert actions.os_mismatch("flatpak remote-ls --updates", "win32")

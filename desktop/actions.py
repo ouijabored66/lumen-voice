@@ -12,8 +12,17 @@ import time
 
 TTL = 600
 RUN_TIMEOUT = 12
+# Approved tasks run in the background while the app polls GET /api/action/<id>.
+# The cap matches the app's ~10 minute poll window.
+APPROVE_TIMEOUT = 600
 
 INSTRUCTION = (
+    "You are running on the user's own computer through their Lumen desktop server. "
+    "The user is talking to you from their iPhone or Apple Watch, so you CAN reach "
+    "this computer: tasks you propose run here once the user approves them on their "
+    "device. If the user asks whether you can reach or do things on their PC, say yes "
+    "and explain that each task needs their tap to approve; never say you cannot "
+    "access their PC. "
     "If the user wants something done on this computer, such as opening an app, "
     "running a command, or checking disk space, do not run it. "
     'Reply with only a JSON object {"title":"short description","command":"exact shell command"}. '
@@ -228,15 +237,29 @@ class Queue:
             item["status"] = "running"
             command = item["command"]
             title = item["title"]
+            worker = threading.Thread(
+                target=self._finish, args=(ident, command, title), daemon=True
+            )
+            worker.start()
+            return _detail(item)
+
+    def _finish(self, ident: str, command: str, title: str) -> None:
+        """Run an approved command off the request thread, then record the outcome.
+
+        The app polls GET /api/action/<id> for the terminal status, result, and
+        spoken summary, so the approve POST returns while the task still runs.
+        """
         started = time.monotonic()
-        status, output = run_command(command)
-        budget = min(4.0, max(0.0, 13.0 - (time.monotonic() - started)))
+        status, output = run_command(command, timeout=APPROVE_TIMEOUT)
+        budget = min(10.0, max(0.0, 20.0 - (time.monotonic() - started)))
         spoken = summarize(status, output, title, command, budget)
         with self._lock:
+            item = self._items.get(ident)
+            if item is None:
+                return
             item["status"] = status
             item["result"] = output
             item["spoken"] = spoken
-            return _detail(item)
 
     def _expire_locked(self, now: float | None = None) -> None:
         now = time.time() if now is None else now
@@ -277,7 +300,7 @@ def shell_hint(platform: str | None = None) -> str:
         return (
             "This computer is Linux (Debian or Ubuntu). Proposed commands run in the POSIX shell, never in cmd or PowerShell. "
             "Never use Windows commands such as sfc, DISM, chkdsk, powershell, or Get-* cmdlets. "
-            "To check for errors and updates, use systemctl --failed; journalctl -p 3 -b --no-pager | tail -n 50; "
+            "To check for errors and updates, use systemctl --failed; journalctl -p 3 --since -24h --no-pager | tail -n 50; "
             "apt list --upgradable (or pikman); flatpak remote-ls --updates. "
             "For disk space use df -h."
         )
@@ -341,7 +364,7 @@ def command_invocation(command: str, platform: str | None = None) -> tuple[objec
     return command, True
 
 
-def run_command(command: str, platform: str | None = None) -> tuple[str, str]:
+def run_command(command: str, platform: str | None = None, timeout: float = RUN_TIMEOUT) -> tuple[str, str]:
     reason = os_mismatch(command, platform)
     if reason:
         return "failed", reason
@@ -349,7 +372,7 @@ def run_command(command: str, platform: str | None = None) -> tuple[str, str]:
     kwargs: dict = dict(
         capture_output=True,
         text=True,
-        timeout=RUN_TIMEOUT,
+        timeout=timeout,
         shell=use_shell,
         stdin=subprocess.DEVNULL,
     )
@@ -445,11 +468,30 @@ def _pretty_size(token: str) -> str:
     return token
 
 
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _log_line(line: str) -> bool:
+    """True for raw journal/syslog lines, which should never be read aloud."""
+    parts = line.split()
+    if len(parts) >= 3 and parts[0] in _MONTHS and parts[1].isdigit() and ":" in parts[2]:
+        return True
+    if len(line) > 10 and line[4] == "-" and line[7] == "-" and line[:4].isdigit():
+        return True
+    start = line.find("[")
+    while start != -1:
+        end = line.find("]:", start)
+        if end != -1 and line[start + 1:end].isdigit():
+            return True
+        start = line.find("[", start + 1)
+    return False
+
+
 def _useful_lines(text: str) -> list[str]:
     rows = []
     for line in text.splitlines():
         line = line.strip()
-        if not line or _header(line):
+        if not line or _header(line) or _log_line(line):
             continue
         rows.append(line)
         if len(rows) == 3:

@@ -837,8 +837,19 @@ final class LumenModel: ObservableObject {
         }
     }
 
+    /// Approvals already submitted or being watched, by action id. Stops a double-tap
+    /// (or a phone + Watch approve at once) from starting two watch loops that would
+    /// each append the result.
+    private var approving: Set<String> = []
+    /// Action ids whose result bubble is already in `messages`. A retry after the task
+    /// finished must not append the same result text again.
+    private var deliveredResults: Set<String> = []
+
     func approve(_ action: PCAction) async {
-        guard let r = request(action.server, "/api/action/\(action.id)/approve", method: "POST", timeout: 15) else { return }
+        guard !approving.contains(action.id) else { return }
+        approving.insert(action.id)
+        defer { approving.remove(action.id) }
+        guard let r = request(action.server, "/api/action/\(action.id)/approve", method: "POST", timeout: 30) else { return }
         haptic.impactOccurred()
         do {
             let (data, resp) = try await URLSession.shared.data(for: r)
@@ -848,11 +859,13 @@ final class LumenModel: ObservableObject {
                 fail(msg ?? (code == 403 ? "PC control only works from this app over Tailscale." : "Couldn't approve that (\(code))."))
                 return
             }
-            updateAction(action.id) { $0.status = .running }
-            await watch(action)
         } catch {
-            fail("Couldn't reach \(action.server.label) to approve that.")
+            // A timeout here does not mean the server is down: the approve call used
+            // to block until the task finished, and an older server still does. Fall
+            // through to the status poll, which reports the genuine failure case.
         }
+        updateAction(action.id) { $0.status = .running }
+        await watch(action)
     }
 
     func cancel(_ action: PCAction) async {
@@ -904,16 +917,21 @@ final class LumenModel: ObservableObject {
     }
 
     /// Poll a running task until the PC reports back, then show and speak the result.
+    /// Only a failed status check (the server truly unreachable) reports "Couldn't
+    /// reach …"; a slow task just keeps polling, up to ~10 minutes.
     private func watch(_ action: PCAction) async {
-        for _ in 0..<720 {                                   // up to an hour
+        guard await actionStatus(action) != nil else {
+            fail("Couldn't reach \(action.server.label) to approve that.")
+            return
+        }
+        for _ in 0..<150 {                                   // ~10 minutes at 4 s
             try? await Task.sleep(nanoseconds: 4_000_000_000)
-            guard let r = request(action.server, "/api/action/\(action.id)", timeout: 30),
-                  let (data, _) = try? await URLSession.shared.data(for: r),
-                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let st = PCAction.Status(rawValue: (obj["status"] as? String) ?? "") else { continue }
-            if st == .running { continue }
+            guard let obj = await actionStatus(action) else { continue }
+            guard let st = PCAction.Status(rawValue: (obj["status"] as? String) ?? "") else { continue }
+            if st == .running || st == .pending { continue }
             let result = (obj["result"] as? String) ?? ""
             updateAction(action.id) { $0.status = st; $0.result = result }
+            guard deliveredResults.insert(action.id).inserted else { return }
             let finished = st == .done || st == .partial
             let spoken = ((obj["spoken"] as? String) ?? (finished ? "Done." : "That didn't work.")).trimmingCharacters(in: .whitespacesAndNewlines)
             let text = spoken.isEmpty ? (finished ? "Done." : "That didn't work.") : spoken
@@ -921,6 +939,17 @@ final class LumenModel: ObservableObject {
             if speakReplies { demoVoice.speak(text) }
             return
         }
+        fail("That task is still running on your PC. It will finish there; ask me again for the result.")
+    }
+
+    /// One status read for an action. Returns nil when the server can't be reached
+    /// (or the request can't be built); a 404 answer still decodes to a terminal miss.
+    private func actionStatus(_ action: PCAction) async -> [String: Any]? {
+        guard let r = request(action.server, "/api/action/\(action.id)", timeout: 30),
+              let (data, resp) = try? await URLSession.shared.data(for: r),
+              (resp as? HTTPURLResponse)?.statusCode == 200,
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return obj
     }
 
     /// Show tasks that are still waiting (for example ones asked for from the Watch).
