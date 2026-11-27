@@ -89,4 +89,12 @@ Full writeup: `SETUP-FIX-LOG.md`. Headline:
 4. Wait for the macOS job to archive `ios/LumenVoice.xcodeproj` (scheme `LumenVoice`, version **1.6.2** build **6**) and upload to TestFlight. Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`.
 5. App Store Connect: paste **Description** and **Promotional text** from `docs/app-store-listing.md`, then submit that TestFlight build for review when you want it public.
 
-**Update 2 status: code on branch, awaiting Dylan's push (if needed) and workflow run.** Also paste listing text; that is not done from this host.
+`git push origin feat/setup-friction-20261126` failed with the same auth error as Update 1:
+
+```
+fatal: could not read Username for 'https://github.com': terminal prompts disabled
+```
+
+No credential workarounds attempted. Branch is local: `4d09c0a` on `feat/setup-friction-20261126`.
+
+**Update 2 status: code shipped to branch, awaiting Dylan's workflow run.** Also paste listing text; that is not done from this host.

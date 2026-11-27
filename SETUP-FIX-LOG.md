@@ -43,7 +43,7 @@ QR is drawn **on this computer** with vendored Nayuki `desktop/qrcodegen.py` (MI
 - Live after `systemctl --user restart lumen-server`: `GET /pair` HTTP 200 HTML with inline SVG; `GET /health` 401 without token, 200 with token. Port from config (8790 on this host).
 - No Swift toolchain on this host. iOS changes got a review pass and brace-balance check.
 - xtool cannot archive/upload (SDK not installed; no upload subcommand). `gh` is not installed.
-- `git push origin feat/setup-friction-20261126` — see GROK-APP-LOG.md; HTTPS prompts are disabled here.
+- `git push origin feat/setup-friction-20261126` failed: `fatal: could not read Username for 'https://github.com': terminal prompts disabled`. No credential workarounds. Branch is local at `4d09c0a`.
 
 ## What remains for Dylan
 
