@@ -262,3 +262,6 @@ Dylan reports the App Store workflow run passed: **1.6.3 build 7 is in TestFligh
 ## 2026-11-26 ~21:05 CST — 1.6.3 SUBMITTED (logged by Lumen)
 
 Dylan attached build 8 and submitted version 1.6.3 for App Review. Path there: runs #14/#15 failed at the certificate step (Apple Distribution cert limit); two leftover Nov 22 Distribution certs revoked (9VS6PQPJHQ, YP9JHP7THJ), 5-minute propagation wait, run #16 carried build 8 (fd4ee4a, gold-on-gold icon verified inside the commit) through. Build 7 was never submitted — the reviewer had specifically requested a lighter Watch icon.
+
+## 2026-11-26 — LICENSE added (all rights reserved)
+Added at the direction of Dylan Reed: a proprietary LICENSE (Copyright 2026 Dylan Reed, all rights reserved) was committed on main to protect the paid app. The repo is public because the App Store privacy policy links into it, so no open-source license was applied. Contrast from the same evening: the new BayouOS repo is private and GPLv3.
