@@ -18,3 +18,6 @@ AuthKey_*
 *.mobileprovision
 *.p12
 ExportOptions.plist
+
+# local config backups (contain keys — never commit)
+desktop/config.json.bak-*
